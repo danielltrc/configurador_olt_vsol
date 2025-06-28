@@ -37,8 +37,7 @@
             font-weight: bold;
         }
         input[type="text"], 
-        input[type="number"], 
-        select {
+        input[type="number"] {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
@@ -107,6 +106,15 @@
             color: #777;
             font-size: 14px;
         }
+        #error-fallback {
+            display: none;
+            color: red;
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid red;
+            border-radius: 4px;
+            background-color: #ffeeee;
+        }
     </style>
 </head>
 <body>
@@ -158,81 +166,120 @@
         
         <div id="result"></div>
         <div id="success" class="success"></div>
+        <div id="error-fallback"></div>
         
         <button id="download-btn">Baixar Configuração</button>
     </div>
 
     <footer>
-        <center>Desenvolvido por IPvFull Consultoria</center>
+        <center>Desenvolvido por [Seu Nome] - [Seu Cargo]</center>
     </footer>
 
     <script>
+        // Verificação inicial quando a página carrega
         document.addEventListener('DOMContentLoaded', function() {
-            const generateBtn = document.getElementById('generate-btn');
-            const downloadBtn = document.getElementById('download-btn');
-            const resultDiv = document.getElementById('result');
-            const successDiv = document.getElementById('success');
+            console.log("Página carregada - Iniciando configuração...");
             
-            generateBtn.addEventListener('click', generateConfig);
-            downloadBtn.addEventListener('click', downloadConfig);
-            
-            function validateIP(ip) {
-                const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
-                return ipv4Regex.test(ip);
-            }
-            
-            function generateConfig() {
-                document.querySelectorAll('.error').forEach(el => el.textContent = '');
+            try {
+                // Elementos principais
+                const generateBtn = document.getElementById('generate-btn');
+                const downloadBtn = document.getElementById('download-btn');
+                const resultDiv = document.getElementById('result');
+                const successDiv = document.getElementById('success');
+                const errorFallback = document.getElementById('error-fallback');
                 
-                const hostname = document.getElementById('hostname').value.trim();
-                const vlan_gerencia = document.getElementById('vlan_gerencia').value.trim();
-                const ip_gerencia = document.getElementById('ip_gerencia').value.trim();
-                const gateway = document.getElementById('gateway').value.trim();
-                const vlans_gpons = document.getElementById('vlans_gpons').value.trim();
-                const porta_uplink = document.getElementById('porta_uplink').value.trim();
-                const qtd_pons = parseInt(document.getElementById('qtd_pons').value);
-                
-                let isValid = true;
-                
-                if (!hostname) {
-                    document.getElementById('hostname').nextElementSibling.textContent = 'Campo obrigatório!';
-                    isValid = false;
+                // Verificar se todos os elementos existem
+                if (!generateBtn || !downloadBtn || !resultDiv || !successDiv || !errorFallback) {
+                    throw new Error("Elementos essenciais da página não foram encontrados.");
                 }
                 
-                if (!vlan_gerencia || !/^\d+$/.test(vlan_gerencia)) {
-                    document.getElementById('vlan_gerencia').nextElementSibling.textContent = 'VLAN inválida!';
-                    isValid = false;
+                console.log("Todos os elementos principais encontrados com sucesso.");
+                
+                // Adicionar event listeners
+                generateBtn.addEventListener('click', generateConfig);
+                downloadBtn.addEventListener('click', downloadConfig);
+                
+                console.log("Event listeners configurados com sucesso.");
+                
+                // Função para validar endereços IP
+                function validateIP(ip) {
+                    const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
+                    return ipv4Regex.test(ip);
                 }
                 
-                if (!ip_gerencia || !validateIP(ip_gerencia)) {
-                    document.getElementById('ip_gerencia_error').textContent = 'IP inválido! Exemplo: 172.19.0.2/29';
-                    isValid = false;
-                }
-                
-                if (!gateway || !validateIP(gateway.split('/')[0])) {
-                    document.getElementById('gateway_error').textContent = 'Gateway inválido! Exemplo: 172.19.0.1';
-                    isValid = false;
-                }
-                
-                if (!vlans_gpons || !/^[\d,]+$/.test(vlans_gpons)) {
-                    document.getElementById('vlans_gpons').nextElementSibling.textContent = 'VLANs inválidas!';
-                    isValid = false;
-                }
-                
-                if (!porta_uplink || !/^\d+\/\d+$/.test(porta_uplink)) {
-                    document.getElementById('porta_uplink').nextElementSibling.textContent = 'Porta inválida! Exemplo: 0/8';
-                    isValid = false;
-                }
-                
-                if (isNaN(qtd_pons) || qtd_pons < 1 || qtd_pons > 16) {
-                    document.getElementById('qtd_pons').nextElementSibling.textContent = 'Quantidade inválida! (1-16)';
-                    isValid = false;
-                }
-                
-                if (!isValid) return;
-                
-                try {
-                    let config = `!
+                // Função principal para gerar a configuração
+                function generateConfig() {
+                    console.log("Iniciando geração de configuração...");
+                    
+                    try {
+                        // Limpar mensagens anteriores
+                        document.querySelectorAll('.error').forEach(el => el.textContent = '');
+                        successDiv.textContent = '';
+                        errorFallback.textContent = '';
+                        errorFallback.style.display = 'none';
+                        
+                        // Obter valores dos campos
+                        const hostname = document.getElementById('hostname').value.trim();
+                        const vlan_gerencia = document.getElementById('vlan_gerencia').value.trim();
+                        const ip_gerencia = document.getElementById('ip_gerencia').value.trim();
+                        const gateway = document.getElementById('gateway').value.trim();
+                        const vlans_gpons = document.getElementById('vlans_gpons').value.trim();
+                        const porta_uplink = document.getElementById('porta_uplink').value.trim();
+                        const qtd_pons = parseInt(document.getElementById('qtd_pons').value);
+                        
+                        console.log("Valores obtidos:", {
+                            hostname, vlan_gerencia, ip_gerencia, gateway, 
+                            vlans_gpons, porta_uplink, qtd_pons
+                        });
+                        
+                        // Validação dos campos
+                        let isValid = true;
+                        
+                        if (!hostname) {
+                            document.getElementById('hostname').nextElementSibling.textContent = 'Campo obrigatório!';
+                            isValid = false;
+                        }
+                        
+                        if (!vlan_gerencia || !/^\d+$/.test(vlan_gerencia)) {
+                            document.getElementById('vlan_gerencia').nextElementSibling.textContent = 'VLAN inválida!';
+                            isValid = false;
+                        }
+                        
+                        if (!ip_gerencia || !validateIP(ip_gerencia)) {
+                            document.getElementById('ip_gerencia_error').textContent = 'IP inválido! Exemplo: 172.19.0.2/29';
+                            isValid = false;
+                        }
+                        
+                        if (!gateway || !validateIP(gateway.split('/')[0])) {
+                            document.getElementById('gateway_error').textContent = 'Gateway inválido! Exemplo: 172.19.0.1';
+                            isValid = false;
+                        }
+                        
+                        if (!vlans_gpons || !/^[\d,]+$/.test(vlans_gpons)) {
+                            document.getElementById('vlans_gpons').nextElementSibling.textContent = 'VLANs inválidas!';
+                            isValid = false;
+                        }
+                        
+                        if (!porta_uplink || !/^\d+\/\d+$/.test(porta_uplink)) {
+                            document.getElementById('porta_uplink').nextElementSibling.textContent = 'Porta inválida! Exemplo: 0/8';
+                            isValid = false;
+                        }
+                        
+                        if (isNaN(qtd_pons) || qtd_pons < 1 || qtd_pons > 16) {
+                            document.getElementById('qtd_pons').nextElementSibling.textContent = 'Quantidade inválida! (1-16)';
+                            isValid = false;
+                        }
+                        
+                        if (!isValid) {
+                            errorFallback.textContent = 'Corrija os campos destacados antes de gerar a configuração.';
+                            errorFallback.style.display = 'block';
+                            return;
+                        }
+                        
+                        console.log("Todos os campos validados com sucesso.");
+                        
+                        // Gerar configuração básica
+                        let config = `!
 !  configuration saved from vty
 !   ! Current configuration !
 !
@@ -276,9 +323,11 @@ ipv6 nd mtu-option
 exit
 !`;
 
-                    // Adicionar interfaces gigabitethernet
-                    for (let i = 1; i <= 4; i++) {
-                        config += `
+                        console.log("Configuração básica gerada.");
+
+                        // Adicionar interfaces gigabitethernet
+                        for (let i = 1; i <= 4; i++) {
+                            config += `
 interface gigabitethernet 0/${i}
 switchport mode hybrid
 switchport hybrid pvid vlan 1
@@ -294,11 +343,13 @@ no switchport isolate
 no ip igmp snooping immediate-leave
 exit
 !`;
-                    }
+                        }
 
-                    // Adicionar interfaces GPON dinamicamente
-                    for (let i = 1; i <= qtd_pons; i++) {
-                        config += `
+                        console.log("Interfaces gigabitethernet adicionadas.");
+
+                        // Adicionar interfaces GPON dinamicamente
+                        for (let i = 1; i <= qtd_pons; i++) {
+                            config += `
 interface gpon 0/${i}
 no shutdown 
 mdi force
@@ -310,9 +361,11 @@ no p2p
 no ip igmp snooping immediate-leave
 exit
 !`;
-                    }
+                        }
 
-                    config += `
+                        console.log(`${qtd_pons} interfaces GPON adicionadas.`);
+
+                        config += `
 !
 port link-flapping mode auto-recovery
 !
@@ -333,11 +386,11 @@ commit
 exit
 !`;
 
-                    // Adicionar perfis de serviço para cada VLAN
-                    vlans_gpons.split(',').forEach((vlan, index) => {
-                        if (vlan && !isNaN(vlan)) {
-                            const profileId = 400 + index + 1;
-                            config += `
+                        // Adicionar perfis de serviço para cada VLAN
+                        vlans_gpons.split(',').forEach((vlan, index) => {
+                            if (vlan && !isNaN(vlan)) {
+                                const profileId = 400 + index + 1;
+                                config += `
 profile srv id ${profileId} name bridge/router_${vlan}
 portvlan eth 1 mode transparent
 commit
@@ -355,10 +408,12 @@ profile line id ${profileId} name bridge/router_${vlan}
 commit
 exit
 !`;
-                        }
-                    });
+                            }
+                        });
 
-                    config += `
+                        console.log("Perfis de serviço adicionados.");
+
+                        config += `
 onu auto-learn bind matching-type exact
 !
 plug_and_play vlan 1
@@ -366,12 +421,12 @@ set variable_vlan disable
 set plug_and_play enable
 !`;
 
-                    // Configuração automática de ONUs para cada PON
-                    vlans_gpons.split(',').forEach((vlan, index) => {
-                        if (vlan && !isNaN(vlan)) {
-                            const pon = index + 1;
-                            if (pon <= qtd_pons) {
-                                config += `
+                        // Configuração automática de ONUs para cada PON
+                        vlans_gpons.split(',').forEach((vlan, index) => {
+                            if (vlan && !isNaN(vlan)) {
+                                const pon = index + 1;
+                                if (pon <= qtd_pons) {
+                                    config += `
 interface gpon 0/${pon}
 range min 0 max 300
 onu auto-learn
@@ -380,11 +435,13 @@ onu auto-learn line-profile name bridge/router_${vlan}
 onu auto-learn srv-profile name bridge/router_${vlan}
 exit
 !`;
+                                }
                             }
-                        }
-                    });
+                        });
 
-                    config += `
+                        console.log("Configuração de ONUs adicionada.");
+
+                        config += `
 !
 remote-protection
 disable
@@ -445,35 +502,73 @@ web security admin_control enable
 exit
 !`;
 
-                    resultDiv.textContent = config;
-                    resultDiv.style.display = 'block';
-                    downloadBtn.style.display = 'block';
-                    downloadBtn.dataset.config = config;
-                    downloadBtn.dataset.filename = `config_olt_${hostname}.txt`;
-                    
-                    successDiv.textContent = '✅ Configuração gerada com sucesso!';
-                    
-                } catch (e) {
-                    resultDiv.textContent = `❌ Erro: ${e.message}`;
-                    resultDiv.style.display = 'block';
-                    successDiv.textContent = '';
+                        console.log("Configuração completa gerada com sucesso.");
+
+                        // Exibir resultado
+                        resultDiv.textContent = config;
+                        resultDiv.style.display = 'block';
+                        downloadBtn.style.display = 'block';
+                        downloadBtn.dataset.config = config;
+                        downloadBtn.dataset.filename = `config_olt_${hostname}.txt`;
+                        
+                        successDiv.textContent = '✅ Configuração gerada com sucesso!';
+                        
+                    } catch (e) {
+                        console.error("Erro na geração:", e);
+                        errorFallback.innerHTML = `
+                            <strong>Erro ao gerar configuração:</strong><br>
+                            ${e.message}<br><br>
+                            Verifique o console do navegador (F12) para mais detalhes.
+                        `;
+                        errorFallback.style.display = 'block';
+                    }
                 }
-            }
-            
-            function downloadConfig() {
-                const blob = new Blob([downloadBtn.dataset.config], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
                 
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = downloadBtn.dataset.filename;
-                document.body.appendChild(a);
-                a.click();
+                // Função para baixar a configuração
+                function downloadConfig() {
+                    console.log("Iniciando download da configuração...");
+                    
+                    try {
+                        const config = downloadBtn.dataset.config;
+                        const filename = downloadBtn.dataset.filename;
+                        
+                        if (!config || !filename) {
+                            throw new Error("Nenhuma configuração para baixar. Gere a configuração primeiro.");
+                        }
+                        
+                        // Método moderno com Blob
+                        const blob = new Blob([config], { type: 'text/plain;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        
+                        setTimeout(() => {
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                        }, 100);
+                        
+                        console.log("Download iniciado com sucesso.");
+                        
+                    } catch (e) {
+                        console.error("Erro no download:", e);
+                        errorFallback.innerHTML = `
+                            <strong>Erro ao baixar:</strong><br>
+                            ${e.message}<br><br>
+                            Você pode copiar manualmente o texto acima.
+                        `;
+                        errorFallback.style.display = 'block';
+                    }
+                }
                 
-                setTimeout(() => {
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                }, 0);
+                console.log("Aplicação configurada com sucesso e pronta para uso.");
+                
+            } catch (e) {
+                console.error("Erro na inicialização da aplicação:", e);
+                alert("Erro crítico ao carregar a aplicação. Verifique o console para detalhes.");
             }
         });
     </script>
