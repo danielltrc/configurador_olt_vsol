@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Configuração OLT VSOL</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], 
+        input[type="number"], 
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        .section-title {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 15px;
+            margin: 25px 0 15px 0;
+            border-radius: 4px;
+            font-size: 18px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin: 25px auto;
+            width: 200px;
+            text-align: center;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+            display: none;
+            font-family: monospace;
+            overflow-x: auto;
+        }
+        .required:after {
+            content: " *";
+            color: red;
+        }
+        .error {
+            color: red;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+            margin-top: 15px;
+            text-align: center;
+            font-size: 16px;
+        }
+        #download-btn {
+            display: none;
+            margin-top: 10px;
+        }
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #777;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gerador de Configuração OLT VSOL</h1>
+        
+        <div class="section-title">CONFIGURAÇÃO BÁSICA</div>
+        
+        <div class="form-group">
+            <label for="hostname" class="required">1. Hostname da OLT</label>
+            <input type="text" id="hostname" placeholder="ex: OLT.VSOL.NOVA">
+        </div>
+        
+        <div class="form-group">
+            <label for="vlan_gerencia" class="required">2. VLAN de Gerência</label>
+            <input type="text" id="vlan_gerencia" placeholder="ex: 599">
+        </div>
+        
+        <div class="form-group">
+            <label for="ip_gerencia" class="required">3. IP de Gerência</label>
+            <input type="text" id="ip_gerencia" placeholder="ex: 172.19.0.2/29">
+            <div id="ip_gerencia_error" class="error"></div>
+        </div>
+        
+        <div class="form-group">
+            <label for="gateway" class="required">4. Gateway</label>
+            <input type="text" id="gateway" placeholder="ex: 172.19.0.1">
+            <div id="gateway_error" class="error"></div>
+        </div>
+        
+        <div class="section-title">CONFIGURAÇÃO DAS INTERFACES</div>
+        
+        <div class="form-group">
+            <label for="porta_uplink" class="required">5. Porta de Uplink</label>
+            <input type="text" id="porta_uplink" placeholder="ex: 0/8">
+        </div>
+        
+        <div class="form-group">
+            <label for="vlans_gpons" class="required">6. VLANs das GPONs (separadas por vírgula)</label>
+            <input type="text" id="vlans_gpons" placeholder="ex: 200,201,202">
+        </div>
+        
+        <div class="form-group">
+            <label for="qtd_pons" class="required">7. Quantidade de PONs</label>
+            <input type="number" id="qtd_pons" min="1" max="16" placeholder="ex: 8">
+        </div>
+        
+        <button id="generate-btn">Gerar Configuração</button>
+        
+        <div id="result"></div>
+        <div id="success" class="success"></div>
+        
+        <button id="download-btn">Baixar Configuração</button>
+    </div>
+
+    <footer>
+        <center>Desenvolvido por IPvFull Consultoria</center>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const generateBtn = document.getElementById('generate-btn');
+            const downloadBtn = document.getElementById('download-btn');
+            const resultDiv = document.getElementById('result');
+            const successDiv = document.getElementById('success');
+            
+            generateBtn.addEventListener('click', generateConfig);
+            downloadBtn.addEventListener('click', downloadConfig);
+            
+            function validateIP(ip) {
+                const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
+                return ipv4Regex.test(ip);
+            }
+            
+            function generateConfig() {
+                document.querySelectorAll('.error').forEach(el => el.textContent = '');
+                
+                const hostname = document.getElementById('hostname').value.trim();
+                const vlan_gerencia = document.getElementById('vlan_gerencia').value.trim();
+                const ip_gerencia = document.getElementById('ip_gerencia').value.trim();
+                const gateway = document.getElementById('gateway').value.trim();
+                const vlans_gpons = document.getElementById('vlans_gpons').value.trim();
+                const porta_uplink = document.getElementById('porta_uplink').value.trim();
+                const qtd_pons = parseInt(document.getElementById('qtd_pons').value);
+                
+                let isValid = true;
+                
+                if (!hostname) {
+                    document.getElementById('hostname').nextElementSibling.textContent = 'Campo obrigatório!';
+                    isValid = false;
+                }
+                
+                if (!vlan_gerencia || !/^\d+$/.test(vlan_gerencia)) {
+                    document.getElementById('vlan_gerencia').nextElementSibling.textContent = 'VLAN inválida!';
+                    isValid = false;
+                }
+                
+                if (!ip_gerencia || !validateIP(ip_gerencia)) {
+                    document.getElementById('ip_gerencia_error').textContent = 'IP inválido! Exemplo: 172.19.0.2/29';
+                    isValid = false;
+                }
+                
+                if (!gateway || !validateIP(gateway.split('/')[0])) {
+                    document.getElementById('gateway_error').textContent = 'Gateway inválido! Exemplo: 172.19.0.1';
+                    isValid = false;
+                }
+                
+                if (!vlans_gpons || !/^[\d,]+$/.test(vlans_gpons)) {
+                    document.getElementById('vlans_gpons').nextElementSibling.textContent = 'VLANs inválidas!';
+                    isValid = false;
+                }
+                
+                if (!porta_uplink || !/^\d+\/\d+$/.test(porta_uplink)) {
+                    document.getElementById('porta_uplink').nextElementSibling.textContent = 'Porta inválida! Exemplo: 0/8';
+                    isValid = false;
+                }
+                
+                if (isNaN(qtd_pons) || qtd_pons < 1 || qtd_pons > 16) {
+                    document.getElementById('qtd_pons').nextElementSibling.textContent = 'Quantidade inválida! (1-16)';
+                    isValid = false;
+                }
+                
+                if (!isValid) return;
+                
+                try {
+                    let config = `!
+!  configuration saved from vty
+!   ! Current configuration !
+!
+hostname ${hostname}
+log trap emergencies
+auto-copy running-config startup-config enable week_day mon enable tues enable wed enable thur enable fri enable sat enable sun enable hour 23 minute 0
+auto-backup running-config startup-config enable week_day mon enable tues enable wed enable thur enable fri enable sat enable sun enable hour 23 minute 0 tftp-serverip 192.168.8.18
+!
+line vty
+exit
+!
+security-dos
+dos prevent level off 
+exit
+!
+interface aux
+ip address 192.168.8.200 255.255.255.0
+exit
+interface loopback
+ip address 127.0.0.1 255.0.0.0
+ipv6 address ::1/128
+exit
+!
+vlan 1
+exit
+vlan ${vlans_gpons.split(',').join(' ')}
+vlan ${vlan_gerencia}
+description GERENCIA
+exit
+!
+interface vlan ${vlan_gerencia}
+ip address ${ip_gerencia}
+ipv6 address fe80::64:4ed7:c8ff:fe73:6d16 link-local
+exit
+interface aux
+exit
+interface vlan ${vlan_gerencia}
+ipv6 nd ra-min-interval 66 ra-max-interval 200
+ipv6 nd ra-hop-limit 64
+ipv6 nd mtu-option
+exit
+!`;
+
+                    // Adicionar interfaces gigabitethernet
+                    for (let i = 1; i <= 4; i++) {
+                        config += `
+interface gigabitethernet 0/${i}
+switchport mode hybrid
+switchport hybrid pvid vlan 1
+switchport hybrid vlan 1 untagged
+${i === 4 ? `switchport hybrid vlan ${vlan_gerencia},${vlans_gpons} tagged` : ''}
+no shutdown 
+${i === 1 ? 'speed auto ' : ''}
+mdi force
+storm-control broadcast fps 512
+no storm-control multicast
+storm-control unknow fps 512
+no switchport isolate
+no ip igmp snooping immediate-leave
+exit
+!`;
+                    }
+
+                    // Adicionar interfaces GPON dinamicamente
+                    for (let i = 1; i <= qtd_pons; i++) {
+                        config += `
+interface gpon 0/${i}
+no shutdown 
+mdi force
+storm-control broadcast fps 512
+no storm-control multicast
+storm-control unknow fps 512
+no switchport isolate
+no p2p
+no ip igmp snooping immediate-leave
+exit
+!`;
+                    }
+
+                    config += `
+!
+port link-flapping mode auto-recovery
+!
+!
+profile dba id 511 name default1
+type 3 assured 1024 maximum 1024000
+exit
+!
+profile srv id 1 name srv_1
+portvlan eth 1 mode tag vlan 1
+commit
+exit
+!
+profile srv id 3 name srv_3
+portvlan eth 1 mode hybrid def_vlan 1
+portvlan eth 1 vlan 1,${vlans_gpons.replace(/,/g, '-')}
+commit
+exit
+!`;
+
+                    // Adicionar perfis de serviço para cada VLAN
+                    vlans_gpons.split(',').forEach((vlan, index) => {
+                        if (vlan && !isNaN(vlan)) {
+                            const profileId = 400 + index + 1;
+                            config += `
+profile srv id ${profileId} name bridge/router_${vlan}
+portvlan eth 1 mode transparent
+commit
+exit
+!
+profile line id ${profileId} name bridge/router_${vlan}
+  tcont 1 dba default1
+    gemport 1 tcont 1 gemport_name gem_1
+      service ser_1 gemport 1 untag
+      service-port 1 gemport 1 uservlan untag vlan ${vlan}
+    gemport 2 tcont 1 gemport_name gem_5
+      service ser_2 gemport 2 vlan ${vlan}
+      service-port 2 gemport 2 uservlan ${vlan} vlan ${vlan}
+  tcont 2 name tcont_5 dba default1
+commit
+exit
+!`;
+                        }
+                    });
+
+                    config += `
+onu auto-learn bind matching-type exact
+!
+plug_and_play vlan 1
+set variable_vlan disable
+set plug_and_play enable
+!`;
+
+                    // Configuração automática de ONUs para cada PON
+                    vlans_gpons.split(',').forEach((vlan, index) => {
+                        if (vlan && !isNaN(vlan)) {
+                            const pon = index + 1;
+                            if (pon <= qtd_pons) {
+                                config += `
+interface gpon 0/${pon}
+range min 0 max 300
+onu auto-learn
+plug_and_play enable
+onu auto-learn line-profile name bridge/router_${vlan}
+onu auto-learn srv-profile name bridge/router_${vlan}
+exit
+!`;
+                            }
+                        }
+                    });
+
+                    config += `
+!
+remote-protection
+disable
+!
+debug mode 
+exit
+!
+ip route 0.0.0.0/0 ${gateway}
+!
+
+mac address-table mac-flapping interval 30
+mac address-table mac-flapping mode auto-recovery
+mac address-table mac-flapping range all
+mac address-table mac-flapping effect onu
+mac address-table mac-flapping suppression aging-time 30
+!
+access-list disable
+!
+access-list ipv6 disable
+login-access-list permit ssh 0.0.0.0 0.0.0.0
+login-access-list permit web 0.0.0.0 0.0.0.0
+login-access-list deny snmp 0.0.0.0 0.0.0.0
+login-access-list ipv6 deny snmp ::/0
+login-access-list deny telnet 0.0.0.0 0.0.0.0
+login-access-list ipv6 deny telnet ::/0
+login-access-list enable 
+!
+queue-scheduler strict-priority
+!
+dhcp-relay information option disable
+dhcp-relay information strategy keep
+!
+dhcp-snooping information option disable
+dhcp-snooping information strategy keep
+!
+duid duid-llt
+!
+crypto key generate rsa usage-keys modulus 2048
+!
+time zone -03:00
+!
+telnet loging-settings retry-waiting-time enable
+telnet loging-settings retry-waiting-time 60
+!
+role add custom_default permission 682
+!
+user add ipvful login-password xp@zend123
+user role ipvful ADMIN enable-password xp@zend123
+!
+spanning-tree mst configuration
+exit
+!
+web login timeout 30
+web verification-code disable
+!
+debug mode
+web security admin_control enable
+exit
+!`;
+
+                    resultDiv.textContent = config;
+                    resultDiv.style.display = 'block';
+                    downloadBtn.style.display = 'block';
+                    downloadBtn.dataset.config = config;
+                    downloadBtn.dataset.filename = `config_olt_${hostname}.txt`;
+                    
+                    successDiv.textContent = '✅ Configuração gerada com sucesso!';
+                    
+                } catch (e) {
+                    resultDiv.textContent = `❌ Erro: ${e.message}`;
+                    resultDiv.style.display = 'block';
+                    successDiv.textContent = '';
+                }
+            }
+            
+            function downloadConfig() {
+                const blob = new Blob([downloadBtn.dataset.config], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = downloadBtn.dataset.filename;
+                document.body.appendChild(a);
+                a.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 0);
+            }
+        });
+    </script>
+</body>
+</html>
